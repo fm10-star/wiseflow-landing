@@ -1,4 +1,6 @@
 // Wiseflow Premium Dynamic Actions
+const SUPABASE_URL = "https://bdqkhzeaqhisuauywrka.supabase.co/rest/v1"; 
+const SUPABASE_ANON_KEY = "sb_publishable_l5e061fWZYJI39t3LP5sFg_0qKXKWJU";
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Dashboard Tab Navigation
@@ -133,33 +135,94 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 5. Form submission handling with premium Toast notification
+    // 5. Form submission handling with Supabase integration and premium Toast notification
     const leadForm = document.getElementById('leadForm');
     const toast = document.getElementById('success-toast');
 
     if (leadForm) {
-        leadForm.addEventListener('submit', (e) => {
+        leadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Collect details
-            const name = document.getElementById('nombre').value;
+            const submitBtn = leadForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerText;
             
-            // Show premium success feedback
-            if (toast) {
-                const toastTitle = toast.querySelector('h5');
-                if (toastTitle) {
-                    toastTitle.innerText = `¡Gracias, ${name}!`;
-                }
-                toast.classList.add('show');
-                
-                // Hide toast after 5 seconds
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 5000);
-            }
+            // Disable button and show sending state
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Enviando...';
+            
+            const nombre = document.getElementById('nombre').value;
+            const email = document.getElementById('email').value;
+            const mensaje = document.getElementById('mensaje').value;
 
-            // Clear inputs
-            leadForm.reset();
+            try {
+                const response = await fetch(`${SUPABASE_URL}/leads`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ nombre, email, mensaje })
+                });
+
+                if (toast) {
+                    const toastTitle = toast.querySelector('h5');
+                    const toastText = toast.querySelector('p');
+                    const toastIcon = toast.querySelector('.toast-icon');
+
+                    if (response.ok) {
+                        if (toastTitle) toastTitle.innerText = `¡Gracias, ${nombre}!`;
+                        if (toastText) toastText.innerText = 'Solicitud enviada con éxito. Pronto verás el demo en el dashboard.';
+                        if (toastIcon) {
+                            toastIcon.innerText = '✓';
+                            toastIcon.style.color = 'var(--accent-cyan)';
+                            toastIcon.style.background = 'rgba(6, 182, 212, 0.1)';
+                        }
+                        toast.style.borderColor = 'var(--accent-cyan)';
+                        leadForm.reset();
+                    } else {
+                        if (toastTitle) toastTitle.innerText = 'Error al enviar';
+                        if (toastText) toastText.innerText = 'Hubo un error al procesar el contacto.';
+                        if (toastIcon) {
+                            toastIcon.innerText = '✗';
+                            toastIcon.style.color = '#ef4444';
+                            toastIcon.style.background = 'rgba(239, 68, 68, 0.1)';
+                        }
+                        toast.style.borderColor = '#ef4444';
+                    }
+                    
+                    toast.classList.add('show');
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 5000);
+                }
+            } catch (error) {
+                console.error('Error post lead:', error);
+                if (toast) {
+                    const toastTitle = toast.querySelector('h5');
+                    const toastText = toast.querySelector('p');
+                    const toastIcon = toast.querySelector('.toast-icon');
+                    
+                    if (toastTitle) toastTitle.innerText = 'Error de Conexión';
+                    if (toastText) toastText.innerText = 'No se pudo establecer conexión con el servidor.';
+                    if (toastIcon) {
+                        toastIcon.innerText = '✗';
+                        toastIcon.style.color = '#ef4444';
+                        toastIcon.style.background = 'rgba(239, 68, 68, 0.1)';
+                    }
+                    toast.style.borderColor = '#ef4444';
+                    toast.classList.add('show');
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 5000);
+                }
+            } finally {
+                // Restore button state
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalBtnText;
+            }
         });
     }
 });
